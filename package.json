@@ -49,13 +49,13 @@
   },
   "description": "This is dev support mock RESTful API. Refer to django-rest-framework implementation.",
   "keywords": ["mock", "mocker", "restful", "django-rest-framework", "mock-restful", "mock-api", "mock-service"],
-  "homepage": "https://github.com/SkylerHu/mock-restful-api",
+  "homepage": "https://github.com/skylerhu/mock-restful-api",
   "repository": {
     "type": "git",
     "url": "git@github.com:SkylerHu/mock-restful-api.git"
   },
   "bugs": {
-    "url": "https://github.com/SkylerHu/mock-restful-api/issues"
+    "url": "https://github.com/skylerhu/mock-restful-api/issues"
   },
   "license": "MIT"
 }

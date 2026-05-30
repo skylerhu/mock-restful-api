@@ -1,11 +1,11 @@
 # mock-restful-api
 
 [![NPM Version](https://img.shields.io/npm/v/mock-restful-api)](https://www.npmjs.com/package/mock-restful-api)
-[![GitHub Actions Workflow Status](https://github.com/SkylerHu/mock-restful-api/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/SkylerHu/mock-restful-api)
-[![Coveralls](https://img.shields.io/coverallsCoverage/github/SkylerHu/mock-restful-api)](https://github.com/SkylerHu/mock-restful-api)
-[![GitHub License](https://img.shields.io/github/license/SkylerHu/mock-restful-api)](https://github.com/SkylerHu/mock-restful-api)
+[![GitHub Actions Workflow Status](https://github.com/skylerhu/mock-restful-api/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/skylerhu/mock-restful-api)
+[![Coveralls](https://img.shields.io/coverallsCoverage/github/SkylerHu/mock-restful-api)](https://github.com/skylerhu/mock-restful-api)
+[![GitHub License](https://img.shields.io/github/license/SkylerHu/mock-restful-api)](https://github.com/skylerhu/mock-restful-api)
 
-依赖 express 框架实现的接口 mock 服务，参照 django-rest-framework 实现。支持列表刷选、模糊搜索、排序，增删改查等操作。
+依赖 express 框架实现的接口 mock 服务，参照 django-rest-framework 实现。支持列表筛选、模糊搜索、排序，增删改查等操作。
 
 The interface mock service is implemented by the express framework, and is implemented with reference to django-rest-framework. It supports list selection, fuzzy search, sorting, addition, deletion, modification, and other operations.
 
@@ -55,7 +55,7 @@ Options:
 | --------------- | ------- | ------------------------------------ | ------------------------------------------------ |
 | restful         | string  | restful 接口 path 定义               | "web/users/"                                     |
 | page_size       | integer | list 接口默认分页大小，默认值：20    | 20                                               |
-| filter_fields   | object  | 定义可以刷选的字段                   | {"username": ["exact", "startswith"]}            |
+| filter_fields   | object  | 定义可以筛选的字段                   | {"username": ["exact", "startswith"]}            |
 | search_fields   | array   | 定义用于模糊搜索的字段               | ["username"]                                     |
 | ordering_fields | array   | 定义用于排序的字段                   | ["id"]                                           |
 | ordering        | array   | 定义默认排序，`+`递增(默认); `-`递减 | ["id"]                                           |
@@ -79,30 +79,32 @@ Options:
 例如配置 `web/users/` 后，基础列表数据用 `rows` 定义， 服务将支持以下接口：(依赖命令行参数 `--prefix="/"`)
 
 - `GET /web/users/` `200` 获取列表数据
-  - 允许刷选字段由 `filter_fields` 定义
+  - 允许筛选字段由 `filter_fields` 定义
   - 模糊搜索，接口使用参数 `search`，允许模糊搜索的字段由 `search_fields` 定义
   - 排序接口传递参数 `ordering`，允许排序的字段由 `ordering_fields` 定义
-- `POST /web/users/` `201` 新建记录, 若配置了 `rules` ，将会按照 rules 定义对数据进行校验
+  - 分页接口传递参数 `page` 和 `page_size`，`page` 默认值为 1，`page_size` 默认值为配置文件中 `page_size` 定义的值（未定义则为 20）
+- `POST /web/users/` `201` 新建记录, 若配置了 `rules` ，将会按照 rules 定义对数据进行校验（若未提供主键字段，会自动生成递增的数字 ID）
 - `GET /web/users/:pk([\\w-]+)/` `200` 按照 `pk_field` 定义主键，根据键值 `pk` 获取详情
 - `PATCH /web/users/:pk([\\w-]+)/` `200` 更新部分数据
-- `UPDATE /web/users/:pk([\\w-]+)/` `200` 提交完整数据以更新记录
+- `PUT /web/users/:pk([\\w-]+)/` `200` 提交完整数据以更新记录
 - `DELETE /web/users/:pk([\\w-]+)/` `204` 根据主键删除记录
 
 需要注意的是：
 
-- 刷选条件对 详情接口的操作也都生效，先根据 query 参数进行刷选，然后再寻找 pk 的记录
+- 筛选条件对 详情接口的操作也都生效，先根据 query 参数进行筛选，然后再寻找 pk 的记录
 - 新增、修改、删除数据，会实际对 `rows` 数据操作生效，mock 服务重启后数据重置；
 - 若是启动 mock 服务的参数 `--prefix=openapi` 则生成接口示例为 `GET /openapi/web/users/`
 
 #### filter_fields
 
-对列表数据刷选，能够筛选的字段必须在该字段中明确定义，示例如下：
+对列表数据筛选，能够筛选的字段必须在该字段中明确定义，示例如下：
 
 ```json
 {
   "filter_fields": {
     "id": ["exact", "in"],
     "username": ["exact", "in", "contains", "startswith", "endswith", "regex"],
+    "is_active": ["exact"],
     "age": ["exact", "range", "lt", "lte", "gt", "gte", "isnull"],
     "created_at": ["range"],
     "city__name": ["exact", "in"]
@@ -114,24 +116,24 @@ Options:
 
 - 基本的查找关键字参数采用形式 `field__lookup=value` （使用双下划线）
   - `exact` 完全匹配，实现的是 `==` 运算；eg: `username=skyler` 等价于 `username__exact=skyler`
-  - `isnull` 刷选数据是否为空的记录
+  - `isnull` 筛选数据是否为空的记录
     - `age__isnull=1` 筛选数据为 `undefined`/`null` 的数据，值为 `""` 不符合条件
-    - `age__isnull=0` 熟宣数据不为空的数据
-  - `in` 参数是列表值，可用英文逗号 `,` 隔开；eg: `id__in=1,2,3`，返回 username 值在 `[1,2,3]` 内的数据
+    - `age__isnull=0` 筛选数据不为空的数据
+  - `in` 参数是列表值，可用英文逗号 `,` 隔开；eg: `id__in=1,2,3`，返回 id 值在 `[1,2,3]` 内的数据
   - `startswith` 前缀匹配，eg: `username__startswith=sky`
   - `endswith` 后缀匹配，eg: `username__endswith=ler`
   - `contains` 字符串包含，eg: `username__contains=ky`
   - `regex` 字符串正则, eg: `username__regex=sk.*ler`
-  - `range` 区间范围，用于日期、数字甚至字符，传递 2 个值时使用逗号 `,` 隔开
-    - `age__range=1,100` 刷选 age 值在 [1,100] 内的记录，即 `0 <= age <= 100`
+  - `range` 或 `csv` 区间范围，用于日期、数字甚至字符，传递 2 个值时使用逗号 `,` 隔开
+    - `age__range=1,100` 筛选 age 值在 [1,100] 内的记录，即 `0 <= age <= 100`
     - `age__range=1` 筛选 `age >= 1` 的记录，等价于 `age__gte=100`
     - `age__range=,100` 筛选 `age <= 100` 的记录，等价于 `age__lte=100`
-  - `lt` 小于， eg: `age__lt=100` 刷选 `age < 100` 的记录
-  - `lte` 小于等于， eg: `age__lte=100` 刷选 `age <= 100` 的记录
-  - `gt` 大于， eg: `age__gt=1` 刷选 `age > 1` 的记录
-  - `gte` 大于等于， eg: `age__gte=1` 刷选 `age >= 1` 的记录
-- 若是 query 参数中对应值为空字符串，则查询条件不生效；例如 `username=&search=` 这两个条件都是无效刷选；
-- 可用 `__` （使用双下划线）定义多级深度的数据查找; eg: `city__name__in="beijing"` 可帅选出以下数据
+  - `lt` 小于， eg: `age__lt=100` 筛选 `age < 100` 的记录
+  - `lte` 小于等于， eg: `age__lte=100` 筛选 `age <= 100` 的记录
+  - `gt` 大于， eg: `age__gt=1` 筛选 `age > 1` 的记录
+  - `gte` 大于等于， eg: `age__gte=1` 筛选 `age >= 1` 的记录
+- 若是 query 参数中对应值为空字符串，则查询条件不生效；例如 `username=&search=` 这两个条件都是无效筛选；
+- 可用 `__` （使用双下划线）定义多级深度的数据查找; eg: `city__name__in="beijing"` 可筛选出以下数据
 
 ```json
 [
@@ -214,7 +216,7 @@ actions 是对 restful 的扩展，依赖 `restful` 的定义，示例：
     },
     {
       "method": "get",
-      "url_path": "releated/",
+      "url_path": "related/",
       "detail": true,
       "response": {}
     }
@@ -225,9 +227,9 @@ actions 是对 restful 的扩展，依赖 `restful` 的定义，示例：
 以上配置根据拼接规则 `{restful}/{url_path}` 会生成以下接口：
 
 - `POST /web/users/create/`
-- `GET /web/users/:pk([\\w-]+)/releated/` 因为定义了 `detail=true`，所以路由支持传递 `pk`
+- `GET /web/users/:pk([\\w-]+)/related/` 因为定义了 `detail=true`，所以路由支持传递 `pk`
   - 需要注意的是，`pk` 只要符合正则定义，无论何值，返回结果都按照 `response` 定义返回
-  - 即 `GET /web/users/1/releated/` 和 `/web/users/2/releated/` 返回值一样
+  - 即 `GET /web/users/1/related/` 和 `/web/users/2/related/` 返回值一样
 
 > 注意：生成的接口 path 是否 `/` 结尾，取决于 `restful` 的配置是否 `/` 结尾。
 
@@ -258,7 +260,7 @@ actions 是对 restful 的扩展，依赖 `restful` 的定义，示例：
 | ------- | ------- | -------------------------------------------- | --------------------------------------------------- |
 | code    | intrger | 定义返回状态码                               | 默认值 200                                          |
 | headers | object  | 定义返回 Header 键值对                       | {"Content-Type": "image/png"}                       |
-| json    | any     | 定义返回的 json 数据                         |                                                     |
+| json    | object/array | 定义返回的 json 数据                         |                                                     |
 | text    | string  | 定义返回的文本数据                           |                                                     |
 | file    | string  | 定义实现下载文件                             | 配置文件相对(当前运行路径)/绝对路径, eg: ./test.jpg |
 | delay   | int     | 支持单个接口写死一个 delay 延迟返回，单位 ms |                                                     |
@@ -267,8 +269,10 @@ actions 是对 restful 的扩展，依赖 `restful` 的定义，示例：
 
 #### 列表接口
 
+支持分页、筛选、搜索、排序等操作：
+
 ```shell
-curl "http://0.0.0.0:3001/web/users/?is_active=1&ordering=-id&city__name=anhui&search=sky"
+curl "http://0.0.0.0:3001/web/users/?page=1&page_size=10&is_active=1&ordering=-id&city__name=anhui&search=sky"
 ```
 
 返回状态码为 `200`：
